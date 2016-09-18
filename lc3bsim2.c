@@ -60,6 +60,7 @@ void process_instruction();
 /* Use this to avoid overflowing 16 bits on the bus.           */
 /***************************************************************/
 #define Low16bits(x) ((x) & 0xFFFF)
+#define Low8bits(x) ((x) & 0x00FF)
 #define Low4bits 0x000F
 /***************************************************************/
 /* Main memory.                                                */
@@ -436,10 +437,10 @@ int readInstructions(int currentaddress)
 
 int sext(int data, int position)
 {
-
+/*TODO: Fix sext*/
     int value = Low16bits(data);
-	int highbit = (value >> (position-1))&0x01;
-	if(highbit)
+
+	if(value < 0)
 	{
 		value+= 0xFFFF - (1U <<(position));
 	}
@@ -469,15 +470,19 @@ void process_instruction(){
 	void execute_br(int);
 	void execute_jmp(int);
 	void execute_jsr(int);
-
+	void execute_ldb(int);
+	void execute_ldw(int);
+	void execute_lea(int);
 
 	int currentaddress = CURRENT_LATCHES.PC/2;
 	int instructions = Low16bits(readInstructions(currentaddress));
 	int opCode = (instructions>>12)&Low4bits;
 
+
+
 	switch(opCode) {
 
-		case OP_ADD: execute_add(instructions); break;
+		case OP_ADD: execute_add(instructions);break;
 
 		case OP_AND: execute_and(instructions);break;
 			/*TODO: AND*/
@@ -485,16 +490,14 @@ void process_instruction(){
 			/*TODO: BR*/
 		case OP_JMP: execute_jmp(instructions);break;
 			/*TODO: JMP*/
-		case OP_JSR:
+		case OP_JSR: execute_jsr(instructions);break;
 			/*TODO JSR*/
-		case OP_LDB:
+		case OP_LDB: execute_ldb(instructions);break;
 			/*TODO_LDB*/
-		case OP_LDW:
+		case OP_LDW: execute_ldw(instructions);break;
 			/*TODO LDW*/
-		case OP_LEA:
+		case OP_LEA: execute_lea(instructions);break;
 			/*TODO:LEA*/
-		case OP_RTI:
-			/*TODO:LTI*/
 		case OP_SHF:
 			/*TODO: SHF*/
 		case OP_STB:
@@ -586,10 +589,121 @@ void process_instruction(){
 			/*Return*/
 			NEXT_LATCHES.PC = CURRENT_LATCHES.REGS[7];
 		}
+		else
+		{
+			int BaseR = (instructions >> 6) & 0x7;
+			NEXT_LATCHES.PC = CURRENT_LATCHES.REGS[BaseR];
+		}
+	}
+
+	void execute_jsr(int instructions)
+	{
+		NEXT_LATCHES.PC  = NEXT_LATCHES.REGS[7];
+
+
+		if(instructions & 0x800)
+		{
+			int BaseR = (instructions >> 6) & 0x7;
+			NEXT_LATCHES.PC = CURRENT_LATCHES.REGS[BaseR];
+		}
+		else
+		{
+			int PCOffset11 = (instructions)&0XFFF;
+			NEXT_LATCHES.PC = CURRENT_LATCHES.PC + (sext(PCOffset11,11)<1);
+		}
+
 	}
 
 
 
+	void execute_ldb(int instructions)
+	{
+
+
+		int dr, baser,boffset6,data;
+
+		dr = (instructions>>9)&0x7;
+		baser= (instructions>>9)&0x7;
+		boffset6 = instructions & 0x3F;
+
+		int memLocation = CURRENT_LATCHES.REGS[baser] + sext(boffset6,6);
+		if(memLocation % 2)
+		{
+			data = Low8bits(MEMORY[memLocation][0]);
+		}
+		else
+		{
+			data = Low8bits(MEMORY[memLocation][1]);
+		}
+
+
+		NEXT_LATCHES.REGS[dr] = sext(data,8);
+        setcc(data);
+
+        NEXT_LATCHES.PC=CURRENT_LATCHES.PC+2;
+	}
 
 
 
+	void execute_ldw(int instructions)
+	{
+
+
+		int dr, baser,boffset6;
+
+		dr = (instructions>>9)&0x7;
+		baser= (instructions>>9)&0x7;
+		boffset6 = instructions & 0x3F;
+
+		int memLocation = CURRENT_LATCHES.REGS[baser] + (sext(boffset6,6));/*TODO Check left shift*/
+		int data = Low16bits(((MEMORY[memLocation][1]<<8) + MEMORY[memLocation][0]));
+		NEXT_LATCHES.REGS[dr] = data;
+        setcc(data);
+
+        NEXT_LATCHES.PC=CURRENT_LATCHES.PC+2;
+	}
+
+
+	void execute_lea(int instructions)
+	{
+
+
+		int dr, pcoffset9;
+
+		dr = (instructions>>9)&0x7;
+		pcoffset9 = (instructions)&0x3FF;
+
+
+		dr = CURRENT_LATCHES.PC + (sext(pcoffset9,9)); /*TODO Check left shift*/
+
+        NEXT_LATCHES.PC=CURRENT_LATCHES.PC+2;
+	}
+
+
+	void execute_shf(int instructions)
+	{
+		int dr,sr,amount4;
+
+		dr = (instructions>9)&0x7;
+		sr = (instructions>>6)&0x07;
+		amount4 = (instructions)&0xF;
+
+		if(!(instructions&0x10))
+		{
+			/*left shift*/
+
+			int leftshift = CURRENT_LATCHES.REGS[sr]<<amount4;
+		}
+		else
+		{
+
+			if(!(instructions &0x20))
+			{
+				int rightshiftLogical = CURRENT_LATCHES.REGS[sr]>>amount4;
+			}
+			else
+			{
+				int rightshiftArithmetic = CURRENT_LATCHES.REGS[sr]>>amount4
+			}
+		}
+	}
