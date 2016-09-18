@@ -443,13 +443,18 @@ void process_instruction(){
    *       -Update NEXT_LATCHES
    */
 
+
+	void execute_add(int);
+	void execute_and(int);
+	void execute_br(int);
+
 	int currentaddress = CURRENT_LATCHES.PC/2;
-	int instructions = readInstructions(currentaddress);
+	int instructions = Low16bits(readInstructions(currentaddress));
 	int opCode = (instructions>>12)&Low4bits;
 
 	switch(opCode) {
 
-		case OP_ADD:
+		case OP_ADD: execute_add(instructions); break;
 			/*TODO: ADD Funcitonality*/
 		case OP_AND:
 			/*TODO: AND*/
@@ -481,6 +486,13 @@ void process_instruction(){
 			printf("Invalid Op Code");
 
 }
+
+
+	void execute_add(int instructions)
+	{
+		int dr,sr1,sr2,imm5;
+
+	}
 
 }
 
