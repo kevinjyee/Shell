@@ -481,9 +481,9 @@ void process_instruction(){
 
 		case OP_AND: execute_and(instructions);break;
 			/*TODO: AND*/
-		case OP_BR: execute_br(instructions);break;
+		case OP_BR:  execute_br(instructions);break;
 			/*TODO: BR*/
-		case OP_JMP:
+		case OP_JMP: execute_jmp(instructions);break;
 			/*TODO: JMP*/
 		case OP_JSR:
 			/*TODO JSR*/
@@ -578,6 +578,17 @@ void process_instruction(){
 			NEXT_LATCHES.PC = CURRENT_LATCHES.PC+2;
 		}
 	}
+
+	void execute_jmp(int instructions)
+	{
+		if(instructions & 0x1C0)
+		{
+			/*Return*/
+			NEXT_LATCHES.PC = CURRENT_LATCHES.REGS[7];
+		}
+	}
+
+
 
 
 
