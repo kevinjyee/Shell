@@ -526,10 +526,10 @@ void process_instruction(){
 			data = CURRENT_LATCHES.REGS[sr1] + sext(imm5,5);
 			NEXT_LATCHES.REGS[dr] = Low16bits(data);
 		}
-
+		NEXT_LATCHES.PC=CURRENT_LATCHES.PC+2;
 	}
 
-}
+
 
 
 
