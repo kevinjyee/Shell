@@ -429,7 +429,7 @@ int readInstructions(int currentaddress)
 	/* MEMORY[A][0] stores the least significant byte of word at word address A
 	   MEMORY[A][1] stores the most significant byte of word at word address A
 	*/
-	return (MEMORY[currentaddress][1]<<8) | MEMORY[currentaddress][0];
+	return Low16bits(((MEMORY[currentaddress][1]<<8) + MEMORY[currentaddress][0]));
 
 }
 
@@ -447,6 +447,12 @@ int sext(int data, int position)
 }
 
 
+void setcc(int x)
+{
+    if(x>0) {NEXT_LATCHES.N=0;NEXT_LATCHES.Z=0;NEXT_LATCHES.P=1;}
+    if(x==0) {NEXT_LATCHES.N=0;NEXT_LATCHES.Z=1;NEXT_LATCHES.P=0;}
+    if(x<0) {NEXT_LATCHES.N=1;NEXT_LATCHES.Z=0;NEXT_LATCHES.P =0;}
+}
 
 void process_instruction(){
   /*  function: process_instruction
@@ -472,10 +478,10 @@ void process_instruction(){
 	switch(opCode) {
 
 		case OP_ADD: execute_add(instructions); break;
-			/*TODO: ADD Funcitonality*/
-		case OP_AND:
+
+		case OP_AND: execute_and(instructions);break;
 			/*TODO: AND*/
-		case OP_BR:
+		case OP_BR: execute_br(instructions);break;
 			/*TODO: BR*/
 		case OP_JMP:
 			/*TODO: JMP*/
@@ -508,13 +514,13 @@ void process_instruction(){
 
 	void execute_add(int instructions)
 	{
-		int dr,sr1,sr2,imm5,Abit;
+		int dr,sr1,sr2,imm5,bit5;
 		int data;
-		Abit =(instructions >> 5) & 0x1;
+		bit5 =(instructions >> 5) & 0x1;
 		dr = (instructions >> 9) & 0x7; /*Mask lower three bits*/
 		sr1 = (instructions >>6) & 0x7;
 
-		if(Abit)
+		if(bit5)
 		{
 			sr2 = (instructions >> 0) & 0x7;
 			data = CURRENT_LATCHES.REGS[sr1] + CURRENT_LATCHES.REGS[sr2];
@@ -526,11 +532,52 @@ void process_instruction(){
 			data = CURRENT_LATCHES.REGS[sr1] + sext(imm5,5);
 			NEXT_LATCHES.REGS[dr] = Low16bits(data);
 		}
+		setcc(data);
+		NEXT_LATCHES.PC=CURRENT_LATCHES.PC+2;
+	}
+
+	void execute_and(int instructions)
+	{
+		int dr,sr1,sr2,imm5,bit5;
+		int data;
+		bit5 =(instructions >> 5) & 0x1;
+		dr = (instructions >> 9) & 0x7; /*Mask lower three bits*/
+		sr1 = (instructions >>6) & 0x7;
+
+		if(bit5)
+		{
+			sr2 = (instructions >> 0) & 0x7;
+			data = CURRENT_LATCHES.REGS[sr1] & CURRENT_LATCHES.REGS[sr2];
+			NEXT_LATCHES.REGS[dr] = Low16bits(data);
+		}
+		else
+		{
+			imm5 = (instructions >>0) & 0x1F;
+			data = CURRENT_LATCHES.REGS[sr1] & sext(imm5,5); /*TODO: Not sure if this is correct*/
+			NEXT_LATCHES.REGS[dr] = Low16bits(data);
+		}
+		setcc(data);
 		NEXT_LATCHES.PC=CURRENT_LATCHES.PC+2;
 	}
 
 
-
+	void execute_br(int instructions)
+	{
+		int NBit = instructions & 0x0800;
+		int ZBit = instructions & 0x0400;
+		int PBit = instructions & 0x0200;
+		int Unconditional = ~(instructions & 0xE00);
+		int PCOffset9 = instructions & 0x01FF;
+		if((CURRENT_LATCHES.N && NBit)||
+				(CURRENT_LATCHES.Z && ZBit)||
+				(CURRENT_LATCHES.P && PBit)||
+				Unconditional){
+					NEXT_LATCHES.PC=CURRENT_LATCHES.PC+2+sext(PCOffset9, 9);
+				}
+		else{
+			NEXT_LATCHES.PC = CURRENT_LATCHES.PC+2;
+		}
+	}
 
 
 
