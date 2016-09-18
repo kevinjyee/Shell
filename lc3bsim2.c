@@ -446,7 +446,6 @@ int sext(int data, int position)
 	return value;
 }
 
-
 void setcc(int x)
 {
     if(x>0) {NEXT_LATCHES.N=0;NEXT_LATCHES.Z=0;NEXT_LATCHES.P=1;}
@@ -469,7 +468,9 @@ void process_instruction(){
 	void execute_br(int);
 	void execute_jmp(int);
 	void execute_jsr(int);
-
+        
+        void execute_trap(int);
+        void execute_xor(int);
 
 	int currentaddress = CURRENT_LATCHES.PC/2;
 	int instructions = Low16bits(readInstructions(currentaddress));
@@ -587,6 +588,70 @@ void process_instruction(){
 			NEXT_LATCHES.PC = CURRENT_LATCHES.REGS[7];
 		}
 	}
+        
+        void execute_stb(int instructions)
+        {
+            int sr, baser, offset6, memLocation, data, baserData;
+            sr = (instructions >> 9) & 0x7;
+            data = CURRENT_LATCHES.REGS[sr] & 0xFF;
+            baser = (instructions >> 6) & 0x7;
+            baserData = CURRENT_LATCHES.REGS[baser];
+            offset6 = (instructions >> 0) & 0x3F; 
+            memLocation = sext(offset6, 6) + baserData;
+            if(memLocation & 0x1) /* If memory location is an odd number, index to MEMORY[x][1] */
+            {
+                MEMORY[Low16bits(memLocation >> 1)][1] = data;
+            }
+            else
+            {
+                MEMORY[Low16bits(memLocation >> 1)][0] = data;
+            }
+        }
+        
+        void execute_stw(int instructions)
+        {
+            int sr, baser, offset6, memLocation, srData, baserData;
+            sr = (instructions >> 9) & 0x7;
+            srData = CURRENT_LATCHES.REGS[sr];
+            baser = (instructions >> 6) & 0x7;
+            baserData = CURRENT_LATCHES.REGS[baser];
+            offset6 = (instructions >> 0) & 0x3F;
+            memLocation = sext(offset6, 6) + baserData; /* Check left shift. Probably don't need because of use of 2D Mem array. */
+            MEMORY[memLocation][0] = srData & 0xFF;
+            MEMORY[memLocation][1] = (srData & 0xFF00) >> 8;
+        }
+        
+        void execute_trap(int instructions)
+        {
+            int trapvect8, PC, memLocation;
+            PC = CURRENT_LATCHES.PC + 2;
+            NEXT_LATCHES.REGS[7] = PC;
+            trapvect8 = (instructions >> 0) & 0xFF; /* Check left shift. Probably don't need because of use of 2D Mem array. */
+            PC = Low16bits(((MEMORY[trapvect8][1] << 8) + MEMORY[trapvect8][0]));
+            NEXT_LATCHES.PC = PC;
+        }
+        
+        void execute_xor(int instructions)
+        {
+            int dr,sr1,sr2,imm5,bit5;
+            bit5 = (instructions >> 5) & 0x1;
+            dr = (instructions >> 9) & 0x7; /*Mask lower three bits*/
+            sr1 = (instructions >> 6) & 0x7;
+            if(!bit5) /* Want immediate XOR or NOT */
+            { /* DR = SR1 XOR SR2 */
+                sr2 = (instructions >> 0) & 0x7;
+                data = CURRENT_LATCHES.REGS[sr1] ^ CURRENT_LATCHES.REGS[sr2];
+                NEXT_LATCHES.REGS[dr] = Low16bits(data);
+            }
+            else
+            { /* DR = SR1 XOR SEXT(imm5) */
+                imm5 = (instructions >> 0) & 0x1F;
+                data = CURRENT_LATCHES.REGS[sr1] ^ sext(imm5,5);
+                NEXT_LATCHES.REGS[dr] = Low16bits(data);
+            }
+            setcc(data);
+            NEXT_LATCHES.PC=CURRENT_LATCHES.PC+2;
+        }
 
 
 
