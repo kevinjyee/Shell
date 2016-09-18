@@ -433,6 +433,21 @@ int readInstructions(int currentaddress)
 
 }
 
+
+int sext(int data, int position)
+{
+
+    int value = Low16bits(data);
+	int highbit = (value >> (position-1))&0x01;
+	if(highbit)
+	{
+		value+= 0xFFFF - (1U <<(position));
+	}
+	return value;
+}
+
+
+
 void process_instruction(){
   /*  function: process_instruction
    *
@@ -443,10 +458,12 @@ void process_instruction(){
    *       -Update NEXT_LATCHES
    */
 
-
 	void execute_add(int);
 	void execute_and(int);
 	void execute_br(int);
+	void execute_jmp(int);
+	void execute_jsr(int);
+
 
 	int currentaddress = CURRENT_LATCHES.PC/2;
 	int instructions = Low16bits(readInstructions(currentaddress));
@@ -486,11 +503,29 @@ void process_instruction(){
 			printf("Invalid Op Code");
 
 }
+}
 
 
 	void execute_add(int instructions)
 	{
-		int dr,sr1,sr2,imm5;
+		int dr,sr1,sr2,imm5,Abit;
+		int data;
+		Abit =(instructions >> 5) & 0x1;
+		dr = (instructions >> 9) & 0x7; /*Mask lower three bits*/
+		sr1 = (instructions >>6) & 0x7;
+
+		if(Abit)
+		{
+			sr2 = (instructions >> 0) & 0x7;
+			data = CURRENT_LATCHES.REGS[sr1] + CURRENT_LATCHES.REGS[sr2];
+			NEXT_LATCHES.REGS[dr] = Low16bits(data);
+		}
+		else
+		{
+			imm5 = (instructions >>0) & 0x1F;
+			data = CURRENT_LATCHES.REGS[sr1] + sext(imm5,5);
+			NEXT_LATCHES.REGS[dr] = Low16bits(data);
+		}
 
 	}
 
