@@ -746,7 +746,7 @@ void process_instruction(){
 		int dr, pcoffset9;
 
 		dr = (instructions>>9)&0x7;
-		pcoffset9 = (instructions)&0x3FF;
+		pcoffset9 = (instructions)&0x1FF;
 
 
 		NEXT_LATCHES.REGS[dr]= CURRENT_LATCHES.PC + 2+ (sext(pcoffset9,9)<<1); /*TODO Check left shift*/
