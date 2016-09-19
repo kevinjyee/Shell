@@ -437,12 +437,13 @@ int readInstructions(int currentaddress)
 
 int sext(int data, int position)
 {
-/*TODO: Fix sext*/
-    int value = Low16bits(data);
 
-	if(value < 0)
+    int value = Low16bits(data);
+	int highbit = (value >> (position-1))&0x01;
+	if(highbit)
 	{
-		value+= 0xFFFF - (1U <<(position));
+		int mask = 0xFFFFFFFF << position;
+		value = mask | data;
 	}
 	return value;
 }
@@ -472,7 +473,7 @@ void process_instruction(){
         
         void execute_trap(int);
         void execute_xor(int);
-=======
+
 	void execute_ldb(int);
 	void execute_ldw(int);
 	void execute_lea(int);
@@ -659,7 +660,7 @@ void process_instruction(){
         
         void execute_xor(int instructions)
         {
-            int dr,sr1,sr2,imm5,bit5;
+            int dr,sr1,sr2,imm5,bit5,data;
             bit5 = (instructions >> 5) & 0x1;
             dr = (instructions >> 9) & 0x7; /*Mask lower three bits*/
             sr1 = (instructions >> 6) & 0x7;
@@ -758,6 +759,8 @@ void process_instruction(){
 			/*left shift*/
 
 			int leftshift = CURRENT_LATCHES.REGS[sr]<<amount4;
+			NEXT_LATCHES.REGS[dr] = Low16bits(leftshift);
+			setcc(Low16bits(leftshift));
 		}
 		else
 		{
@@ -765,10 +768,17 @@ void process_instruction(){
 			if(!(instructions &0x20))
 			{
 				int rightshiftLogical = CURRENT_LATCHES.REGS[sr]>>amount4;
+				NEXT_LATCHES.REGS[dr] = Low16bits(rightshiftLogical);
+				setcc(Low16bits(rightshiftLogical));
 			}
 			else
 			{
-				int rightshiftArithmetic = CURRENT_LATCHES.REGS[sr]>>amount4
+				int rightshiftArithmetic = sext(CURRENT_LATCHES.REGS[sr],16)>>amount4;
+				NEXT_LATCHES.REGS[dr] = Low16bits(rightshiftArithmetic);
+				setcc(Low16bits(rightshiftArithmetic));
 			}
 		}
+
+		NEXT_LATCHES.PC = CURRENT_LATCHES.PC + 2;
+
 	}
