@@ -1,0 +1,7 @@
+.ORIG x3000
+LEA R1 A ;R1 is 8
+LEA R2 B ;R2 is 7
+ADD R3 R2 R1 ;R3 is 15
+A .FILL 8
+B .FILL 7
+.END

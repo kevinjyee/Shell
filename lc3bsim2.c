@@ -471,8 +471,8 @@ void process_instruction(){
 	void execute_jmp(int);
 	void execute_jsr(int);
         
-        void execute_trap(int);
-        void execute_xor(int);
+    void execute_trap(int);
+    void execute_xor(int);
 
 	void execute_ldb(int);
 	void execute_ldw(int);
@@ -519,49 +519,58 @@ void process_instruction(){
 
 	void execute_add(int instructions)
 	{
+		printf("---Add Called---\n");
+
 		int dr,sr1,sr2,imm5,bit5;
 		int data;
 		bit5 =(instructions >> 5) & 0x1;
 		dr = (instructions >> 9) & 0x7; /*Mask lower three bits*/
 		sr1 = (instructions >>6) & 0x7;
 
-		if(bit5)
+		if(!bit5)
 		{
 			sr2 = (instructions >> 0) & 0x7;
 			data = CURRENT_LATCHES.REGS[sr1] + CURRENT_LATCHES.REGS[sr2];
 			NEXT_LATCHES.REGS[dr] = Low16bits(data);
+			printf("DR:%d,SR1:%d,SR2:%d\n",NEXT_LATCHES.REGS[dr],CURRENT_LATCHES.REGS[sr1],CURRENT_LATCHES.REGS[sr2]);
 		}
 		else
 		{
 			imm5 = (instructions >>0) & 0x1F;
 			data = CURRENT_LATCHES.REGS[sr1] + sext(imm5,5);
 			NEXT_LATCHES.REGS[dr] = Low16bits(data);
+			printf("DR:%d,SR1:%d,Imm:%d\n",NEXT_LATCHES.REGS[dr],CURRENT_LATCHES.REGS[sr1],sext(imm5,5));
 		}
 		setcc(data);
 		NEXT_LATCHES.PC=CURRENT_LATCHES.PC+2;
+
 	}
 
 	void execute_and(int instructions)
 	{
+		printf("---And Called---\n");
 		int dr,sr1,sr2,imm5,bit5;
 		int data;
 		bit5 =(instructions >> 5) & 0x1;
 		dr = (instructions >> 9) & 0x7; /*Mask lower three bits*/
 		sr1 = (instructions >>6) & 0x7;
 
-		if(bit5)
+		if(!bit5)
 		{
 			sr2 = (instructions >> 0) & 0x7;
 			data = CURRENT_LATCHES.REGS[sr1] & CURRENT_LATCHES.REGS[sr2];
 			NEXT_LATCHES.REGS[dr] = Low16bits(data);
+			printf("DR:%d,SR1:%d,SR2:%d\n",NEXT_LATCHES.REGS[dr],CURRENT_LATCHES.REGS[sr1],CURRENT_LATCHES.REGS[sr2]);
 		}
 		else
 		{
 			imm5 = (instructions >>0) & 0x1F;
 			data = CURRENT_LATCHES.REGS[sr1] & sext(imm5,5); /*TODO: Not sure if this is correct*/
 			NEXT_LATCHES.REGS[dr] = Low16bits(data);
+			printf("DR:%d,SR1:%d,Imm:%d\n",NEXT_LATCHES.REGS[dr],CURRENT_LATCHES.REGS[sr1],sext(imm5,5));
 		}
 		setcc(data);
+
 		NEXT_LATCHES.PC=CURRENT_LATCHES.PC+2;
 	}
 
@@ -733,15 +742,16 @@ void process_instruction(){
 	void execute_lea(int instructions)
 	{
 
-
+		printf("---LEA Called---\n");
 		int dr, pcoffset9;
 
 		dr = (instructions>>9)&0x7;
 		pcoffset9 = (instructions)&0x3FF;
 
 
-		dr = CURRENT_LATCHES.PC + (sext(pcoffset9,9)); /*TODO Check left shift*/
-
+		NEXT_LATCHES.REGS[dr]= CURRENT_LATCHES.PC + 2+ (sext(pcoffset9,9)<<1); /*TODO Check left shift*/
+		printf("PCOffset:%x and Sext:%x\n",pcoffset9,sext(pcoffset9,9));
+		printf("Content in DR:%d\n",NEXT_LATCHES.REGS[dr]);
         NEXT_LATCHES.PC=CURRENT_LATCHES.PC+2;
 	}
 
