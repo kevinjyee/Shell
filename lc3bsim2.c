@@ -492,7 +492,7 @@ void process_instruction(){
 			/*TODO: BR*/
 		case OP_JMP: execute_jmp(instructions);break; /* Works but not if i dont add ret statment?*/
 			/*TODO: JMP*/
-		case OP_JSR: execute_jsr(instructions);break;
+		case OP_JSR: execute_jsr(instructions);break; /* JSR and JSRR Confirmed*/
 			/*TODO JSR*/
 		case OP_LDB: execute_ldb(instructions);break; /* LDB Kind of verified */
 			/*TODO_LDB*/
@@ -618,13 +618,16 @@ void process_instruction(){
 
 		if(instructions & 0x800)
 		{
-			int BaseR = (instructions >> 6) & 0x7;
-			NEXT_LATCHES.PC = CURRENT_LATCHES.REGS[BaseR];
+			printf("---JSR Called---\n");
+			int PCOffset11 = (instructions)&0XFFF;
+			NEXT_LATCHES.PC = CURRENT_LATCHES.PC + 2 + (sext(PCOffset11,11)<1);
 		}
 		else
 		{
-			int PCOffset11 = (instructions)&0XFFF;
-			NEXT_LATCHES.PC = CURRENT_LATCHES.PC + 2 + (sext(PCOffset11,11)<1);
+			printf("---JSRR Called---\n");
+			int BaseR = (instructions >> 6) & 0x7;
+			NEXT_LATCHES.PC = CURRENT_LATCHES.REGS[BaseR];
+
 		}
 
 	}
