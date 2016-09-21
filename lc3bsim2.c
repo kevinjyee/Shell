@@ -484,23 +484,23 @@ void process_instruction(){
 
 	switch(opCode) {
 
-		case OP_ADD: execute_add(instructions);break;
+		case OP_ADD: execute_add(instructions);break; /*ADD Verified */
 
-		case OP_AND: execute_and(instructions);break;
+		case OP_AND: execute_and(instructions);break; /* AND Verified */
 			/*TODO: AND*/
-		case OP_BR:  execute_br(instructions);break;
+		case OP_BR:  execute_br(instructions);break; /* BRANCH Verified */
 			/*TODO: BR*/
-		case OP_JMP: execute_jmp(instructions);break;
+		case OP_JMP: execute_jmp(instructions);break; /* Works but not if i dont add ret statment?*/
 			/*TODO: JMP*/
 		case OP_JSR: execute_jsr(instructions);break;
 			/*TODO JSR*/
-		case OP_LDB: execute_ldb(instructions);break;
+		case OP_LDB: execute_ldb(instructions);break; /* LDB Kind of verified */
 			/*TODO_LDB*/
 		case OP_LDW: execute_ldw(instructions);break;
 			/*TODO LDW*/
-		case OP_LEA: execute_lea(instructions);break;
+		case OP_LEA: execute_lea(instructions);break; /* LEA Verified */
 			/*TODO:LEA*/
-		case OP_SHF:
+		case OP_SHF: execute_shf(instructions);break; /* SHF verified */
 			/*TODO: SHF*/
 		case OP_STB: execute_stb(instructions);break;
 			/*TODO:STB*/
@@ -577,6 +577,7 @@ void process_instruction(){
 
 	void execute_br(int instructions)
 	{
+		printf("---Branch Called---\n");
 		int NBit = instructions & 0x0800;
 		int ZBit = instructions & 0x0400;
 		int PBit = instructions & 0x0200;
@@ -586,7 +587,7 @@ void process_instruction(){
 				(CURRENT_LATCHES.Z && ZBit)||
 				(CURRENT_LATCHES.P && PBit)||
 				Unconditional){
-					NEXT_LATCHES.PC=CURRENT_LATCHES.PC+2+sext(PCOffset9, 9);
+					NEXT_LATCHES.PC=CURRENT_LATCHES.PC+2+(sext(PCOffset9, 9)<<1);
 				}
 		else{
 			NEXT_LATCHES.PC = CURRENT_LATCHES.PC+2;
@@ -595,7 +596,9 @@ void process_instruction(){
 
 	void execute_jmp(int instructions)
 	{
-		if(instructions & 0x1C0)
+
+		printf("---JMP Called---\n");
+		if(((instructions>>6)&0x7) == 0x7)
 		{
 			/*Return*/
 			NEXT_LATCHES.PC = CURRENT_LATCHES.REGS[7];
@@ -609,7 +612,8 @@ void process_instruction(){
 
 	void execute_jsr(int instructions)
 	{
-		NEXT_LATCHES.PC  = NEXT_LATCHES.REGS[7];
+
+	    NEXT_LATCHES.REGS[7]=CURRENT_LATCHES.PC+2;
 
 
 		if(instructions & 0x800)
@@ -620,7 +624,7 @@ void process_instruction(){
 		else
 		{
 			int PCOffset11 = (instructions)&0XFFF;
-			NEXT_LATCHES.PC = CURRENT_LATCHES.PC + (sext(PCOffset11,11)<1);
+			NEXT_LATCHES.PC = CURRENT_LATCHES.PC + 2 + (sext(PCOffset11,11)<1);
 		}
 
 	}
@@ -669,6 +673,7 @@ void process_instruction(){
         
         void execute_xor(int instructions)
         {
+        	printf("---XOR Called---\n");
             int dr,sr1,sr2,imm5,bit5,data;
             bit5 = (instructions >> 5) & 0x1;
             dr = (instructions >> 9) & 0x7; /*Mask lower three bits*/
@@ -694,14 +699,16 @@ void process_instruction(){
 	void execute_ldb(int instructions)
 	{
 
+		printf("---LDB Called---\n");
 
 		int dr, baser,boffset6,data;
 
 		dr = (instructions>>9)&0x7;
-		baser= (instructions>>9)&0x7;
+		baser = (instructions >> 6) & 0x7;
 		boffset6 = instructions & 0x3F;
 
-		int memLocation = CURRENT_LATCHES.REGS[baser] + sext(boffset6,6);
+		int memLocation = CURRENT_LATCHES.REGS[baser]>>1 + sext(boffset6,6);
+
 		if(memLocation % 2)
 		{
 			data = Low8bits(MEMORY[memLocation][0]);
@@ -712,9 +719,10 @@ void process_instruction(){
 		}
 
 
-		NEXT_LATCHES.REGS[dr] = sext(data,8);
+
         setcc(data);
 
+        printf("DR:%d,BaseR:%d,AddressLocation:%d\n",NEXT_LATCHES.REGS[dr],baser,memLocation);
         NEXT_LATCHES.PC=CURRENT_LATCHES.PC+2;
 	}
 
@@ -723,14 +731,14 @@ void process_instruction(){
 	void execute_ldw(int instructions)
 	{
 
-
+		printf("---LDW Called---\n");
 		int dr, baser,boffset6;
 
 		dr = (instructions>>9)&0x7;
-		baser= (instructions>>9)&0x7;
+		baser = (instructions >> 6) & 0x7;
 		boffset6 = instructions & 0x3F;
 
-		int memLocation = CURRENT_LATCHES.REGS[baser] + (sext(boffset6,6));/*TODO Check left shift*/
+		int memLocation = CURRENT_LATCHES.REGS[baser]>>1 + (sext(boffset6,6));
 		int data = Low16bits(((MEMORY[memLocation][1]<<8) + MEMORY[memLocation][0]));
 		NEXT_LATCHES.REGS[dr] = data;
         setcc(data);
@@ -749,7 +757,7 @@ void process_instruction(){
 		pcoffset9 = (instructions)&0x1FF;
 
 
-		NEXT_LATCHES.REGS[dr]= CURRENT_LATCHES.PC + 2+ (sext(pcoffset9,9)<<1); /*TODO Check left shift*/
+		NEXT_LATCHES.REGS[dr]= (CURRENT_LATCHES.PC) + 2 + (sext(pcoffset9,9)<<1); /*TODO Check left shift*/
 		printf("PCOffset:%x and Sext:%x\n",pcoffset9,sext(pcoffset9,9));
 		printf("Content in DR:%d\n",NEXT_LATCHES.REGS[dr]);
         NEXT_LATCHES.PC=CURRENT_LATCHES.PC+2;
@@ -759,7 +767,7 @@ void process_instruction(){
 	void execute_shf(int instructions)
 	{
 		int dr,sr,amount4;
-
+		printf("---SHF Called---\n");
 		dr = (instructions>9)&0x7;
 		sr = (instructions>>6)&0x07;
 		amount4 = (instructions)&0xF;
@@ -771,6 +779,7 @@ void process_instruction(){
 			int leftshift = CURRENT_LATCHES.REGS[sr]<<amount4;
 			NEXT_LATCHES.REGS[dr] = Low16bits(leftshift);
 			setcc(Low16bits(leftshift));
+			printf("Left shift Content in DR:%d\n",NEXT_LATCHES.REGS[dr]);
 		}
 		else
 		{
@@ -780,12 +789,14 @@ void process_instruction(){
 				int rightshiftLogical = CURRENT_LATCHES.REGS[sr]>>amount4;
 				NEXT_LATCHES.REGS[dr] = Low16bits(rightshiftLogical);
 				setcc(Low16bits(rightshiftLogical));
+				printf("Right shift logical Content in DR:%d\n",NEXT_LATCHES.REGS[dr]);
 			}
 			else
 			{
 				int rightshiftArithmetic = sext(CURRENT_LATCHES.REGS[sr],16)>>amount4;
 				NEXT_LATCHES.REGS[dr] = Low16bits(rightshiftArithmetic);
 				setcc(Low16bits(rightshiftArithmetic));
+				printf("Right shift arithmetic  Content in DR:%d\n",NEXT_LATCHES.REGS[dr]);
 			}
 		}
 
