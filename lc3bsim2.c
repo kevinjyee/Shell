@@ -496,15 +496,15 @@ void process_instruction(){
 			/*TODO JSR*/
 		case OP_LDB: execute_ldb(instructions);break; /* LDB Kind of verified */
 			/*TODO_LDB*/
-		case OP_LDW: execute_ldw(instructions);break;
+		case OP_LDW: execute_ldw(instructions);break; /*LDW Kind of verified*/
 			/*TODO LDW*/
 		case OP_LEA: execute_lea(instructions);break; /* LEA Verified */
 			/*TODO:LEA*/
 		case OP_SHF: execute_shf(instructions);break; /* SHF verified */
 			/*TODO: SHF*/
-		case OP_STB: execute_stb(instructions);break;
+		case OP_STB: execute_stb(instructions);break;/*STB verified*/
 			/*TODO:STB*/
-		case OP_STW: execute_stw(instructions);break;
+		case OP_STW: execute_stw(instructions);break; /*STW verified - but not sure about low bit info*/
 			/*TODO:STW*/
 		case OP_TRAP: execute_trap(instructions);break;
 			/*TODO TRAP*/
@@ -634,6 +634,7 @@ void process_instruction(){
         
         void execute_stb(int instructions)
         {
+        	printf("---STB Called---\n");
             int sr, baser, offset6, memLocation, data, baserData;
             sr = (instructions >> 9) & 0x7;
             data = CURRENT_LATCHES.REGS[sr] & 0xFF;
@@ -649,19 +650,24 @@ void process_instruction(){
             {
                 MEMORY[Low16bits(memLocation >> 1)][0] = data;
             }
+            printf("SR:%x,BaseR:%d,MEMORYHIGH:%x,MEMORYLOW:%x\n",NEXT_LATCHES.REGS[sr],MEMORY[Low16bits(memLocation >> 1)][1],MEMORY[Low16bits(memLocation >> 1)][0]);
+            NEXT_LATCHES.PC = CURRENT_LATCHES.PC +2;
         }
         
         void execute_stw(int instructions)
         {
+        	printf("---STW Called---\n");
             int sr, baser, offset6, memLocation, srData, baserData;
             sr = (instructions >> 9) & 0x7;
             srData = CURRENT_LATCHES.REGS[sr];
             baser = (instructions >> 6) & 0x7;
             baserData = CURRENT_LATCHES.REGS[baser];
             offset6 = (instructions >> 0) & 0x3F;
-            memLocation = sext(offset6, 6) + baserData; /* Check left shift. Probably don't need because of use of 2D Mem array. */
+            memLocation = ((sext(offset6, 6)<<1) + baserData)>>1; /* Check left shift. Probably don't need because of use of 2D Mem array. */
             MEMORY[memLocation][0] = srData & 0xFF;
             MEMORY[memLocation][1] = (srData & 0xFF00) >> 8;
+            printf("SR:%x,BaseR:%d,MEMORYHIGH:%x,MEMORYLOW:%x\n",NEXT_LATCHES.REGS[sr],MEMORY[memLocation][1],MEMORY[memLocation][0]);
+                       NEXT_LATCHES.PC = CURRENT_LATCHES.PC +2;
         }
         
         void execute_trap(int instructions)
@@ -745,7 +751,7 @@ void process_instruction(){
 		int data = Low16bits(((MEMORY[memLocation][1]<<8) + MEMORY[memLocation][0]));
 		NEXT_LATCHES.REGS[dr] = data;
         setcc(data);
-
+        printf("DR:%d,BaseR:%d,AddressLocation:%d\n",NEXT_LATCHES.REGS[dr],baser,memLocation);
         NEXT_LATCHES.PC=CURRENT_LATCHES.PC+2;
 	}
 
