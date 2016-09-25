@@ -722,22 +722,22 @@ void process_instruction(){
 		baser = (instructions >> 6) & 0x7;
 		boffset6 = instructions & 0x3F;
 
-		int memLocation = CURRENT_LATCHES.REGS[baser]>>1 + sext(boffset6,6);
+		int memLocation = CURRENT_LATCHES.REGS[baser] + sext(boffset6,6);
 
 		if(memLocation % 2)
 		{
-			data = Low8bits(MEMORY[memLocation][0]);
+			data = Low8bits(MEMORY[(memLocation >> 1)][1]);
 		}
 		else
 		{
-			data = Low8bits(MEMORY[memLocation][1]);
+			data = Low8bits(MEMORY[(memLocation >> 1)][0]);
 		}
 
 
 
         setcc(data);
 
-        printf("DR:%d,BaseR:%d,AddressLocation:%d\n",NEXT_LATCHES.REGS[dr],baser,memLocation);
+        printf("DR:%d,BaseR:%d,AddressLocation:%d\n",NEXT_LATCHES.REGS[dr],baser,memLocation >> 1);
         NEXT_LATCHES.PC=CURRENT_LATCHES.PC+2;
 	}
 
