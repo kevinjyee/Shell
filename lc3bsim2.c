@@ -508,7 +508,7 @@ void process_instruction(){
 			/*TODO:STW*/
 		case OP_TRAP: execute_trap(instructions);break;
 			/*TODO TRAP*/
-		case OP_XOR: execute_xor(instructions);break;
+		case OP_XOR: execute_xor(instructions);break;/*XOR Verified*/
 			/*TODO XOR*/
 		default:
 			printf("Invalid Op Code");
@@ -664,20 +664,24 @@ void process_instruction(){
             baserData = CURRENT_LATCHES.REGS[baser];
             offset6 = (instructions >> 0) & 0x3F;
             memLocation = ((sext(offset6, 6)<<1) + baserData)>>1; /* Check left shift. Probably don't need because of use of 2D Mem array. */
-            MEMORY[memLocation][0] = srData & 0xFF;
-            MEMORY[memLocation][1] = (srData & 0xFF00) >> 8;
-            printf("SR:%x,BaseR:%d,MEMORYHIGH:%x,MEMORYLOW:%x\n",NEXT_LATCHES.REGS[sr],MEMORY[memLocation][1],MEMORY[memLocation][0]);
+            MEMORY[memLocation][0] = Low16bits(srData & 0xFF);
+            MEMORY[memLocation][1] = Low16bits(Low16bits((srData & 0x0000FF00))>>8);
+            printf("SR:%x,MEMORYHIGH:%x,MEMORYLOW:%x\n",NEXT_LATCHES.REGS[sr],MEMORY[memLocation][1],Low16bits(MEMORY[memLocation][0]));
                        NEXT_LATCHES.PC = CURRENT_LATCHES.PC +2;
         }
         
         void execute_trap(int instructions)
         {
-            int trapvect8, PC, memLocation;
+
+
+        	printf("---TRAP Called---\n");
+            int trapvect8, PC;
             PC = CURRENT_LATCHES.PC + 2;
             NEXT_LATCHES.REGS[7] = PC;
-            trapvect8 = (instructions >> 0) & 0xFF; /* Check left shift. Probably don't need because of use of 2D Mem array. */
+            trapvect8 = Low16bits(((instructions >> 0) & 0xFF)>>1); /* Check left shift. Probably don't need because of use of 2D Mem array. */
             PC = Low16bits(((MEMORY[trapvect8][1] << 8) + MEMORY[trapvect8][0]));
             NEXT_LATCHES.PC = PC;
+            printf("OLD PC: %d, NEW PC: %d",NEXT_LATCHES.REGS[7], NEXT_LATCHES.PC);
         }
         
         void execute_xor(int instructions)
@@ -699,6 +703,8 @@ void process_instruction(){
                 data = CURRENT_LATCHES.REGS[sr1] ^ sext(imm5,5);
                 NEXT_LATCHES.REGS[dr] = Low16bits(data);
             }
+
+            printf("DR:%d,SR1:%d,SR2:%d\n",NEXT_LATCHES.REGS[dr],CURRENT_LATCHES.REGS[sr1],CURRENT_LATCHES.REGS[sr2]);
             setcc(data);
             NEXT_LATCHES.PC=CURRENT_LATCHES.PC+2;
         }

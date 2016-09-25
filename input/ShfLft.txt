@@ -2,4 +2,5 @@
 AND R4 R4 #0;
 ADD R4 R4 #8;
 LSHF R4 R4 #1;
+HALT
 .END

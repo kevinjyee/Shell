@@ -1,0 +1,12 @@
+.ORIG x3000
+LEA R1 A ;Contains address of A
+LEA R2 C ; Contains address of C
+LDW R3 R2 #0; Contains XFFFF;
+STW R3 R1 #1; Stored after symbol A into symbl B
+LEA R5 B;
+LDW R6 R5 #0;
+HALT
+A .FILL #8
+B .FILL #7
+C .FILL xFFAA;
+.END
